@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model activity_logs {
+  id         Int       @id @default(autoincrement())
+  admin_id   Int
+  activity   String?   @db.VarChar
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @db.Timestamptz(6)
+  admins     admins    @relation(fields: [admin_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model admins {
+  id              Int             @id @default(autoincrement())
+  first_name      String          @db.VarChar
+  last_name       String          @db.VarChar
+  email           String          @unique @db.VarChar
+  password        String          @db.VarChar
+  profile_url     String?         @db.VarChar
+  created_at      DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime?       @db.Timestamptz(6)
+  isEmailVerified Boolean         @default(false)
+  activity_logs   activity_logs[]
+  courses         courses[]
+}
+
+model assessments {
+  id                   Int            @id @default(autoincrement())
+  course_id            Int?
+  instruction          String?
+  pass_mark_percentage Int?
+  topic_id             Int?
+  courses              courses?       @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  course_topic         course_topics? @relation(fields: [topic_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  questions            questions[]
+  results              results[]
+}
+
+model course_categories {
+  id          Int         @id @default(autoincrement())
+  category_id Int
+  course_id   Int
+  courses     courses?    @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cateogries  categories? @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  created_at  DateTime?   @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime?   @db.Timestamptz(6)
+}
+
+model categories {
+  id                Int                 @id @default(autoincrement())
+  name              String              @db.VarChar
+  image_url         String              @db.VarChar
+  created_at        DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime?           @db.Timestamptz(6)
+  course_categories course_categories[]
+}
+
+model learners_level {
+  id         Int       @id @default(autoincrement())
+  name       String    @db.VarChar
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @db.Timestamptz(6)
+}
+
+model course_topic_contents {
+  id                   Int                    @id @default(autoincrement())
+  course_topic_id      Int?
+  title                String?                @db.VarChar
+  content_url          String?                @db.VarChar
+  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?              @db.Timestamptz(6)
+  content_type         String
+  duration             String?
+  course_topics        course_topics?         @relation(fields: [course_topic_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  course_current_watch course_current_watch[]
+}
+
+model course_topics {
+  id                    Int                     @id @default(autoincrement())
+  title                 String                  @db.VarChar
+  introduction_video    String?                 @db.VarChar
+  topic_no              Int                     @default(autoincrement())
+  course_id             Int?
+  created_at            DateTime?               @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime?               @db.Timestamptz(6)
+  assessments           assessments[]
+  course_topic_contents course_topic_contents[]
+  courses               courses?                @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  course_current_watch  course_current_watch[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model courses {
+  id                   Int                    @id @default(autoincrement())
+  tutor_id             Int?
+  name                 String                 @db.VarChar
+  description          String?
+  benefits             String?                @db.VarChar
+  certification        Boolean?               @default(true)
+  status               course_status?
+  img_url              String?                @db.VarChar
+  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?              @db.Timestamptz(6)
+  assessments          assessments[]
+  course_topics        course_topics[]
+  admins               admins?                @relation(fields: [tutor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  prices               prices[]
+  subscriptions        subscriptions[]
+  course_categories    course_categories[]
+  course_current_watch course_current_watch[]
+}
+
+model currencies {
+  id                                   Int             @id @default(autoincrement())
+  name                                 String?         @db.VarChar
+  symbol                               String?         @db.VarChar
+  short_code                           String?         @db.VarChar
+  prices_prices_currenciesTocurrencies prices[]        @relation("prices_currenciesTocurrencies")
+  subscriptions                        subscriptions[]
+}
+
+model course_current_watch {
+  id              Int                   @id @default(autoincrement())
+  course_id       Int
+  student_id      Int
+  topic_id        Int
+  lesson_id       Int
+  current_watch   String
+  subscription_id Int
+  subscription    subscriptions         @relation(fields: [subscription_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  course          courses               @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  student         students              @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  topic           course_topics         @relation(fields: [topic_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  lesson          course_topic_contents @relation(fields: [lesson_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model prices {
+  id                                       Int         @id @default(autoincrement())
+  course_id                                Int?
+  amount                                   Int?        @default(0)
+  currencies                               Int?
+  courses                                  courses?    @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  currencies_prices_currenciesTocurrencies currencies? @relation("prices_currenciesTocurrencies", fields: [currencies], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model questions {
+  id             Int          @id @default(autoincrement())
+  number         Int?
+  assessment_id  Int?
+  question       String       @db.VarChar
+  correct_answer String?
+  mark           Int?
+  option_1       String
+  option_2       String
+  option_3       String?
+  option_4       String?
+  assessments    assessments? @relation(fields: [assessment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model results {
+  id            Int            @id @default(autoincrement())
+  assessment_id Int?
+  student_id    Int?
+  score         Int?
+  status        result_status?
+  assessments   assessments?   @relation(fields: [assessment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students      students?      @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  created_at    DateTime?      @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime?      @db.Timestamptz(6)
+}
+
+model students {
+  id                   Int                    @id @default(autoincrement())
+  first_name           String                 @db.VarChar
+  last_name            String                 @db.VarChar
+  email                String                 @unique @db.VarChar
+  phone_number         String?                @db.VarChar
+  password             String                 @db.VarChar
+  profile_url          String?                @db.VarChar
+  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?              @db.Timestamptz(6)
+  isEmailVerified      Boolean                @default(false)
+  results              results[]
+  subscriptions        subscriptions[]
+  course_current_watch course_current_watch[]
+}
+
+model subscriptions {
+  id                   Int                    @id @default(autoincrement())
+  course_id            Int
+  student_id           Int
+  amount               Int?                   @default(0)
+  currency_id          Int?
+  payment_ref          String?                @unique @db.VarChar
+  isComplete           Boolean?
+  status               subscriptions_status?
+  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  courses              courses                @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  currencies           currencies?            @relation(fields: [currency_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students             students               @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  course_current_watch course_current_watch[]
+}
+
+model tokens {
+  id         Int       @id @default(autoincrement())
+  user       String?   @db.VarChar
+  token      String?   @db.VarChar
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+enum course_status {
+  active
+  disable
+}
+
+enum result_status {
+  passed
+  failed
+}
+
+enum subscriptions_status {
+  active
+  pending
+}
